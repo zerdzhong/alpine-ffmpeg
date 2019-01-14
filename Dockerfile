@@ -1,7 +1,10 @@
 # ffmpeg - http://ffmpeg.org/download.html
 #
 
-FROM alpine:3.8 AS ffmpeg-build
+FROM alpine:3.8 AS base
+RUN apk add --no-cache --update libgcc libstdc++ ca-certificates libcrypto1.0 libssl1.0 libgomp expat git
+
+FROM base AS ffmpeg-build
 WORKDIR  /tmp/ffmpeg-build
 
 ARG PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
@@ -9,7 +12,7 @@ ARG LD_LIBRARY_PATH=/opt/ffmpeg/lib
 ARG PREFIX=/opt/ffmpeg
 ARG MAKEFLAGS="-j2"
 
-ENV FFMPEG_VERSION=4.1     \
+ENV FFMPEG_VERSION=4.1        \
     FDKAAC_VERSION=0.1.5      \
     LAME_VERSION=3.99.5       \
     LIBASS_VERSION=0.13.7     \
@@ -40,7 +43,6 @@ ARG         FREETYPE_SHA256SUM="5d03dd76c2171a7601e9ce10551d52d4471cf92cd205948e
 ARG         LIBVIDSTAB_SHA256SUM="14d2a053e56edad4f397be0cb3ef8eb1ec3150404ce99a426c4eb641861dc0bb  v1.1.0.tar.gz"
 ARG         LIBASS_SHA256SUM="8fadf294bf701300d4605e6f1d92929304187fca4b8d8a47889315526adbafd7  0.13.7.tar.gz"
 ARG         FRIBIDI_SHA256SUM="3fc96fa9473bd31dcb5500bdf1aa78b337ba13eb8c301e7c28923fea982453a8  0.19.7.tar.gz"
-
 
 RUN     buildDeps="autoconf \
                    automake \
@@ -347,15 +349,14 @@ RUN \
 
 
 RUN \
-    ldd ${PREFIX}/bin/ffmpeg | grep opt/ffmpeg | cut -d ' ' -f 3 | xargs -i cp {} /usr/local/lib/ && \
+    cp -r ${PREFIX}/lib/* /usr/local/lib && \
     cp ${PREFIX}/bin/* /usr/local/bin/ && \
     cp -r ${PREFIX}/share/ffmpeg /usr/local/share/ && \
     cp -r ${PREFIX}/include /usr/local/include && \
     LD_LIBRARY_PATH=/usr/local/lib ffmpeg -buildconf
 
 ### Release Stage
-FROM  alpine:3.8 AS release
-MAINTAINER  zhongzhendong
+FROM  base AS release
 
 ENV LD_LIBRARY_PATH /usr/local/lib
 
